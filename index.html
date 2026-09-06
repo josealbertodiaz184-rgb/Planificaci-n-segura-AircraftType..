@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight Dispatcher • Planificación Segura RAV Global</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        :root {
+            --primary: #0f172a;
+            --secondary: #1e3a8a;
+            --accent: #2563eb;
+            --bg: #0b0f19;
+            --card-bg: #1e293b;
+            --text: #f8fafc;
+            --border: #334155;
+            --highlight: #38bdf8;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --gold: #d97706;
+            --gold-bright: #fbbf24;
+        }
+
+        body {
+            font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 15px;
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            border: 1px solid var(--border);
+        }
+
+        .header-title {
+            text-align: center;
+            border-bottom: 2px solid var(--gold);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        .header-title h1 {
+            color: var(--gold-bright);
+            margin: 0;
+            font-size: 1.5rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .header-title h2 {
+            color: #94a3b8;
+            margin: 5px 0 0 0;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            font-weight: normal;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .card {
+            background: #0f172a;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+
+        .card h3 {
+            margin-top: 0;
+            color: var(--highlight);
+            font-size: 0.95rem;
+            border-bottom: 1px dashed var(--border);
+            padding-bottom: 4px;
+        }
+
+        .form-group {
+            margin-bottom: 8px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-bottom: 2px;
+            text-transform: uppercase;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 6px;
+            background: #1e293b;
+            color: #00ff66;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 0.85rem;
+            font-family: inherit;
+            font-weight: bold;
+        }
+
+        textarea {
+            resize: vertical;
+            height: 45px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 6px;
+            margin-top: 6px;
+        }
+
+        button {
+            width: 100%;
+            background-color: var(--accent);
+            color: white;
+            padding: 8px;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: inherit;
+            text-transform: uppercase;
+        }
+
+        button.btn-calc {
+            background-color: var(--success);
+            margin-top: 10px;
+            font-size: 1rem;
+            padding: 10px;
+        }
+
+        button.btn-danger {
+            background-color: var(--danger);
+        }
+
+        button.btn-remove-wpt {
+            background-color: var(--danger);
+            margin-top: 5px;
+            padding: 4px 8px;
+            font-size: 0.7rem;
+        }
+
+        button:hover {
+            opacity: 0.85;
+        }
+
+        #map {
+            height: 450px;
+            width: 100%;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            margin-top: 10px;
+        }
+
+        .terminal-output {
+            background: #000;
+            color: #00ff66;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            line-height: 1.4;
+            border: 1px solid var(--border);
+            margin-top: 15px;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 0.8rem;
+        }
+
+        th, td {
+            border: 1px solid var(--border);
+            padding: 6px;
+            text-align: center;
+        }
+
+        th {
+            background-color: var(--secondary);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #0f172a;
+        }
+
+        .footer-brand {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid var(--gold);
+            background: #000000;
+            padding: 20px;
+            border-radius: 6px;
+        }
+
+        .footer-brand-text {
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .footer-brand-text h3 {
+            color: var(--gold-bright);
+            margin: 0;
+            font-size: 1.2rem;
+            letter-spacing: 2px;
+        }
+
+        .footer-brand-text p {
+            color: #94a3b8;
+            margin: 4px 0 0 0;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-title">
+        <h1>FLIGHT DISPATCHER</h1>
+        <h2>CONTROL OPERACIONAL • RED DE AEROVÍAS NACIONALES E INTERNACIONALES (RAV / OACI)</h2>
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <h3>1. Aircraft Specs & Weight Unit</h3>
+            <div class="form-group">
+                <label for="unit_select">WEIGHT UNIT (UNIDAD DE PESO):</label>
+                <select id="unit_select" onchange="toggleWeightUnit()">
+                    <option value="LBS">LIBRAS (LBS)</option>
+                    <option value="KGS">KILOGRAMOS (KGS)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="ac_type">AIRCRAFT MODEL:</label>
+                <select id="ac_type" onchange="updateAircraftSpecs()">
+                    <option value="MD80">McDonnell Douglas MD-80/82</option>
+                    <option value="B732">Boeing 737-200</option>
+                    <option value="B733">Boeing 737-300</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="dow_input">AIRCRAFT DOW (DRY OPERATING WEIGHT):</label>
+                <input type="number" id="dow_input" value="78000" oninput="recalculateFlightData()">
+            </div>
+            <div class="form-group">
+                <label for="tas">CRUISE TAS (KTS):</label>
+                <input type="number" id="tas" value="440" oninput="recalculateFlightData()">
+            </div>
+            <div class="form-group">
+                <label for="fuel_rate">FUEL BURN RATE (<span class="unit-label">LBS</span>/HR):</label>
+                <input type="number" id="fuel_rate" value="5850" oninput="recalculateFlightData()">
+            </div>
+            <div class="form-group">
+                <label for="wind_component">WIND COMPONENT (KTS) (+TAIL / -HEAD):</label>
+                <input type="number" id="wind_component" value="0" oninput="recalculateFlightData()">
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>2. Route & RAV Alternate Selection</h3>
+            <div class="form-group">
+                <label for="departure">DEP ICAO (ORIGEN):</label>
+                <input type="text" id="departure" value="SVMI" onchange="updateOptimizedRoutesOptions()">
+            </div>
+            <div class="form-group">
+                <label for="destination">ARR ICAO (DESTINO):</label>
+                <input type="text" id="destination" value="MDPC" onchange="updateOptimizedRoutesOptions()">
+            </div>
+            <div class="form-group">
+                <label for="opt_routes_select">RUTAS OPTIMIZADAS DESPLEGABLES (RED SKYVECTOR):</label>
+                <select id="opt_routes_select" onchange="applySelectedOptimizedRoute()">
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="route_input">RUTA ATS / WAYPOINTS:</label>
+                <textarea id="route_input">SVMI DDP BQN MDPC</textarea>
+            </div>
+            <div class="form-group">
+                <label for="alternate">ALT ICAO (OPTIMIZADO EN RUTA RAV):</label>
+                <input type="text" id="alternate" value="MDSD" placeholder="AUTO SELECCIÓN EN RUTA" onchange="redrawRoute()">
+            </div>
+            <div class="btn-group">
+                <button type="button" onclick="parseRouteFromInput()">PLOTEAR RUTA & AEROVÍAS</button>
+                <button class="btn-danger" type="button" onclick="clearRoute()">BORRAR TODO</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>3. Tri-Fuel & Operational Balance</h3>
+            <div class="form-group">
+                <label for="distance">TRIP DISTANCE (NM):</label>
+                <input type="number" id="distance" value="0" readonly>
+            </div>
+            <div class="form-group">
+                <label for="alt_distance">ALT DISTANCE (DEST -> ALT NM):</label>
+                <input type="number" id="alt_distance" value="0" readonly style="color: #fbbf24;">
+            </div>
+            <div class="form-group">
+                <label for="alt_ete">ALT ETE (HH:MM) [T = D / V]:</label>
+                <input type="text" id="alt_ete" value="00:00" readonly style="color: #fbbf24;">
+            </div>
+            <div class="form-group">
+                <label for="ground_speed">GROUND SPEED (GS KTS):</label>
+                <input type="number" id="ground_speed" value="0" readonly>
+            </div>
+            <div class="form-group">
+                <label for="ete">TRIP ETE (HH:MM) [T = D / V]:</label>
+                <input type="text" id="ete" value="00:00" readonly>
+            </div>
+            <div class="form-group">
+                <label for="fuel_total">FUEL ON BOARD (FOB <span class="unit-label">LBS</span>):</label>
+                <input type="number" id="fuel_total" value="18000" oninput="recalculateFlightData()">
+            </div>
+            <div class="form-group">
+                <label for="min_dispatch_fuel">MIN DISPATCH FUEL (<span class="unit-label">LBS</span>):</label>
+                <input type="number" id="min_dispatch_fuel" value="0" readonly style="color: #ffcc00;">
+            </div>
+        </div>
+    </div>
+
+    <button class="btn-calc" type="button" onclick="calculateFactibilidad()">EJECUTAR CÁLCULO DE FACTIBILIDAD Y OFP GLOBAL</button>
+
+    <div id="map"></div>
+
+    <div class="terminal-output" id="terminal">
+=== FLIGHT DISPATCHER SYSTEM ===
+Awaiting Route Input or Optimization...
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>FUEL COMPONENT (TRI-FUEL BREAKDOWN)</th>
+                <th>VALOR (<span class="unit-label">LBS</span>)</th>
+                <th>LITROS (LTS)</th>
+                <th>GALONES (GAL)</th>
+            </tr>
+        </thead>
+        <tbody id="table-body">
+        </tbody>
+    </table>
+
+    <div class="footer-brand">
+        <div class="footer-brand-text">
+            <h3>FLIGHT DISPATCHER</h3>
+            <p>PLANIFICACIÓN SEGURA — CONTROL OPERACIONAL & DESPACHO RAV</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    const KGS_TO_LBS = 2.20462;
+    const LBS_TO_KGS = 1 / KGS_TO_LBS;
+    const LBS_TO_LITERS = 0.5678;
+    const LBS_TO_GALLONS = 0.14925;
+    const KGS_TO_LITERS = 1.25;
+    const KGS_TO_GALLONS = 0.3302;
+
+    let currentUnit = "LBS";
+
+    const airportsDB = {
+        "SVMI": { lat: 10.6012, lon: -66.9912, name: "Maiquetía Int (SVMI)" },
+        "SVVA": { lat: 10.1497, lon: -67.9286, name: "Valencia Int (SVVA)" },
+        "SVBM": { lat: 10.0427, lon: -69.3586, name: "Barquisimeto Int (SVBM)" },
+        "SVMC": { lat: 10.5581, lon: -71.7278, name: "Maracaibo La Chinita (SVMC)" },
+        "SVCB": { lat: 10.1500, lon: -67.6500, name: "Maracay El Libertador (SVCB)" },
+        "SVMD": { lat: 8.5822,  lon: -71.1611, name: "Mérida Alberto Carnevalli (SVMD)" },
+        "SVCR": { lat: 11.4110, lon: -69.6800, name: "Coro Josefa Camejo (SVCR)" },
+        "SVBC": { lat: 10.1064, lon: -64.6892, name: "Barcelona Int (SVBC)" },
+        "SVMG": { lat: 10.9127, lon: -63.9664, name: "Porlamar Santiago Mariño (SVMG)" },
+        "MDPC": { lat: 18.5674, lon: -68.3634, name: "Punta Cana Int (MDPC)" },
+        "MDSD": { lat: 18.4297, lon: -69.6689, name: "Santo Domingo Las Américas (MDSD)" },
+        "SLVR": { lat: -17.6447, lon: -63.1353, name: "Viru Viru Int - Santa Cruz (SLVR)" },
+        "SLLP": { lat: -16.5133, lon: -68.1922, name: "La Paz El Alto (SLLP)" },
+        "MPTO": { lat: 9.0714,  lon: -79.3835, name: "Panamá Tocumen (MPTO)" },
+        "SKBO": { lat: 4.7016,  lon: -74.1469, name: "Bogotá El Dorado (SKBO)" },
+        "KMIA": { lat: 25.7959, lon: -80.2870, name: "Miami Int (KMIA)" }
+    };
+
+    const waypointsDB = {
+        ...airportsDB,
+        "MARES": { lat: 10.7500, lon: -67.2000, name: "MARES Fix" },
+        "ATONO": { lat: 10.5000, lon: -67.5000, name: "ATONO Fix" },
+        "PBL":   { lat: 10.4781, lon: -68.0722, name: "Puerto Cabello VOR" },
+        "AKPEP": { lat: 10.3000, lon: -67.8000, name: "AKPEP Fix" },
+        "ISARA": { lat: 10.4000, lon: -67.6500, name: "ISARA Fix" },
+        "MBC":   { lat: 10.1800, lon: -64.6800, name: "Barcelona VOR" },
+        "MIQ":   { lat: 10.6000, lon: -66.9800, name: "Maiquetía VOR" },
+        "MAR":   { lat: 10.5600, lon: -71.7300, name: "Maracaibo VOR" },
+        "DDP":   { lat: 12.5000, lon: -69.9500, name: "Aruba Dutch Defense Fix" },
+        "PJG":   { lat: 12.1900, lon: -68.9600, name: "Curaçao VOR" },
+        "BQN":   { lat: 18.4900, lon: -67.1300, name: "Aguadilla VOR" },
+        "KATOK": { lat: 15.0000, lon: -68.5000, name: "KATOK Fix" },
+        "ARUBA": { lat: 12.5200, lon: -69.9800, name: "Aruba Airport Fix" },
+        "MANAO": { lat: -3.0300, lon: -60.0500, name: "Manaus VOR" },
+        "AMAZO": { lat: 1.5000,  lon: -66.8000, name: "AMAZO Fix" },
+        "PORTO": { lat: -8.7600, lon: -63.9000, name: "Porto Velho VOR" },
+        "RBO":   { lat: -9.9600, lon: -67.8900, name: "Rio Branco VOR" },
+        "CUY":   { lat: -15.6500, lon: -56.1100, name: "Cuiabá VOR" },
+        "RIB":   { lat: -11.0000, lon: -66.1000, name: "Riberalta Fix" }
+    };
+
+    const precalculatedRoutes = {
+        "SVMI-SVVA": [
+            { name: "Aerovía A315 (MARES PBL)", route: "SVMI MARES PBL SVVA" },
+            { name: "Aerovía Sur W1 (ATONO ISARA AKPEP)", route: "SVMI ATONO ISARA AKPEP SVVA" }
+        ],
+        "SVMI-SVBM": [
+            { name: "Aerovía A315/W2 PBL", route: "SVMI MARES PBL SVBM" }
+        ],
+        "SVMI-SVMC": [
+            { name: "Aerovía UA315 PBL MAR", route: "SVMI MARES PBL MAR SVMC" }
+        ],
+        "SVMI-MDPC": [
+            { name: "Ruta Caribe Directa ATS (KATOK BQN)", route: "SVMI KATOK BQN MDPC" },
+            { name: "Ruta Vía Aruba / Curaçao (PJG DDP BQN)", route: "SVMI PJG DDP BQN MDPC" }
+        ],
+        "SVVA-MDPC": [
+            { name: "Ruta Norte Directa (DDP BQN)", route: "SVVA DDP BQN MDPC" }
+        ],
+        "SVMI-SLVR": [
+            { name: "Ruta Transamazónica (AMAZO MANAO PORTO)", route: "SVMI AMAZO MANAO PORTO SLVR" },
+            { name: "Ruta Occidental Sur (SKBO RIB)", route: "SVMI SKBO RIB SLVR" }
+        ]
+    };
+
+    const aircraftDefaults = {
+        "MD80": { tas: 440, fuelRateLBS: 5850, dowLBS: 78000 },
+        "B732": { tas: 410, fuelRateLBS: 6200, dowLBS: 60000 },
+        "B733": { tas: 430, fuelRateLBS: 5200, dowLBS: 72000 }
+    };
+
+    let map;
+    let polylineLayer;
+    let altPolylineLayer;
+    let markerGroup;
+    let plottedPoints = [];
+
+    function calculateDistanceNM(lat1, lon1, lat2, lon2) {
+        const R = 3440.065;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
+    }
+
+    function initMap() {
+        map = L.map('map').setView([10.4, -67.5], 6);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+            attribution: '© SkyVector Aeronautical Data Ref / Flight Dispatcher Engine'
+        }).addTo(map);
+
+        markerGroup = L.layerGroup().addTo(map);
+
+        map.on('click', function(e) {
+            const pointName = `WPT${plottedPoints.length + 1}`;
+            plottedPoints.push({ name: pointName, lat: e.latlng.lat, lon: e.latlng.lng });
+            updateRouteTextAreaFromPoints();
+            redrawRoute();
+        });
+
+        updateOptimizedRoutesOptions();
+        parseRouteFromInput();
+    }
+
+    function removeWaypoint(index) {
+        plottedPoints.splice(index, 1);
+        updateRouteTextAreaFromPoints();
+        redrawRoute();
+    }
+
+    function updateRouteTextAreaFromPoints() {
+        document.getElementById('route_input').value = plottedPoints.map(p => p.name).join(' ');
+    }
+
+    function toggleWeightUnit() {
+        const oldUnit = currentUnit;
+        currentUnit = document.getElementById('unit_select').value;
+
+        document.querySelectorAll('.unit-label').forEach(el => {
+            el.innerText = currentUnit;
+        });
+
+        if (oldUnit !== currentUnit) {
+            let fuelRate = parseFloat(document.getElementById('fuel_rate').value) || 0;
+            let fob = parseFloat(document.getElementById('fuel_total').value) || 0;
+            let dow = parseFloat(document.getElementById('dow_input').value) || 0;
+
+            if (currentUnit === "KGS") {
+                document.getElementById('fuel_rate').value = Math.round(fuelRate * LBS_TO_KGS);
+                document.getElementById('fuel_total').value = Math.round(fob * LBS_TO_KGS);
+                document.getElementById('dow_input').value = Math.round(dow * LBS_TO_KGS);
+            } else {
+                document.getElementById('fuel_rate').value = Math.round(fuelRate * KGS_TO_LBS);
+                document.getElementById('fuel_total').value = Math.round(fob * KGS_TO_LBS);
+                document.getElementById('dow_input').value = Math.round(dow * KGS_TO_LBS);
+            }
+        }
+        recalculateFlightData();
+    }
+
+    function updateAircraftSpecs() {
+        const ac = document.getElementById('ac_type').value;
+        const specs = aircraftDefaults[ac];
+
+        document.getElementById('tas').value = specs.tas;
+        
+        if (currentUnit === "KGS") {
+            document.getElementById('fuel_rate').value = Math.round(specs.fuelRateLBS * LBS_TO_KGS);
+            document.getElementById('dow_input').value = Math.round(specs.dowLBS * LBS_TO_KGS);
+        } else {
+            document.getElementById('fuel_rate').value = specs.fuelRateLBS;
+            document.getElementById('dow_input').value = specs.dowLBS;
+        }
+
+        recalculateFlightData();
+    }
+
+    function updateOptimizedRoutesOptions() {
+        const dep = document.getElementById('departure').value.toUpperCase().trim();
+        const arr = document.getElementById('destination').value.toUpperCase().trim();
+        const key = `${dep}-${arr}`;
+        const select = document.getElementById('opt_routes_select');
+
+        select.innerHTML = '';
+
+        if (precalculatedRoutes[key]) {
+            precalculatedRoutes[key].forEach((r) => {
+                let opt = document.createElement('option');
+                opt.value = r.route;
+                opt.innerText = `${r.name} [${r.route}]`;
+                select.appendChild(opt);
+            });
+        } else {
+            let opt = document.createElement('option');
+            opt.value = `${dep} ${arr}`;
+            opt.innerText = `Ruta Directa ATS [${dep} ${arr}]`;
+            select.appendChild(opt);
+        }
+
+        applySelectedOptimizedRoute();
+    }
+
+    function applySelectedOptimizedRoute() {
+        const select = document.getElementById('opt_routes_select');
+        if (select.value) {
+            document.getElementById('route_input').value = select.value;
+            parseRouteFromInput();
+        }
+    }
+
+    function findRAVEnRouteAlternate(depICAO, destICAO) {
+        if (!airportsDB[destICAO]) return null;
+        const dest = airportsDB[destICAO];
+        let closest = null;
+        let minDistance = Infinity;
+
+        Object.keys(airportsDB).forEach(code => {
+            if (code !== destICAO && code !== depICAO) {
+                let apt = airportsDB[code];
+                let dist = calculateDistanceNM(dest.lat, dest.lon, apt.lat, apt.lon);
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    closest = code;
+                }
+            }
+        });
+        return closest;
+    }
+
+    function clearRoute() {
+        plottedPoints = [];
+        document.getElementById('route_input').value = '';
+        redrawRoute();
+    }
+
+    function parseRouteFromInput() {
+        const rawRoute = document.getElementById('route_input').value.toUpperCase();
+        const tokens = rawRoute.replace(/ROUTE:|DCT|A315|UA315|G427|W1|W2/g, ' ').trim().split(/\s+/);
+        
+        plottedPoints = [];
+        tokens.forEach(token => {
+            let cleanToken = token.replace(/[^A-Z0-9]/g, '');
+            if (waypointsDB[cleanToken]) {
+                plottedPoints.push({
+                    name: cleanToken,
+                    lat: waypointsDB[cleanToken].lat,
+                    lon: waypointsDB[cleanToken].lon
+                });
+            }
+        });
+
+        redrawRoute();
+    }
+
+    function redrawRoute() {
+        markerGroup.clearLayers();
+        if (polylineLayer) map.removeLayer(polylineLayer);
+        if (altPolylineLayer) map.removeLayer(altPolylineLayer);
+
+        let totalDistance = 0;
+        let routeCoords = [];
+
+        plottedPoints.forEach((pt, index) => {
+            routeCoords.push([pt.lat, pt.lon]);
+
+            L.marker([pt.lat, pt.lon])
+                .addTo(markerGroup)
+                .bindPopup(`<b>${pt.name}</b><br>LAT: ${pt.lat.toFixed(4)}, LON: ${pt.lon.toFixed(4)}<br>
+                <button class="btn-remove-wpt" onclick="removeWaypoint(${index})">ELIMINAR WAYPOINT</button>`);
+
+            if (index > 0) {
+                let prevPt = plottedPoints[index - 1];
+                totalDistance += calculateDistanceNM(prevPt.lat, prevPt.lon, pt.lat, pt.lon);
+            }
+        });
+
+        let allBounds = [];
+
+        if (routeCoords.length > 1) {
+            polylineLayer = L.polyline(routeCoords, { color: '#2563eb', weight: 4, opacity: 0.9 }).addTo(map);
+            allBounds = [...routeCoords];
+        }
+
+        const dep = document.getElementById('departure').value.toUpperCase().trim();
+        const arr = document.getElementById('destination').value.toUpperCase().trim();
+        let alt = document.getElementById('alternate').value.toUpperCase().trim();
+
+        if (!alt && airportsDB[arr]) {
+            alt = findRAVEnRouteAlternate(dep, arr);
+            if (alt) document.getElementById('alternate').value = alt;
+        }
+
+        let altDistNM = 0;
+        let destPt = waypointsDB[arr] || (plottedPoints.length > 0 ? plottedPoints[plottedPoints.length - 1] : null);
+
+        if (destPt && waypointsDB[alt]) {
+            let altPt = waypointsDB[alt];
+            altDistNM = calculateDistanceNM(destPt.lat, destPt.lon, altPt.lat, altPt.lon);
+            let altCoords = [[destPt.lat, destPt.lon], [altPt.lat, altPt.lon]];
+
+            L.marker([altPt.lat, altPt.lon])
+                .addTo(markerGroup)
+                .bindPopup(`<b>ALTERNO RAV EN RUTA: ${altPt.name || alt}</b><br>DIST DEST->ALT: ${altDistNM.toFixed(1)} NM`);
+
+            altPolylineLayer = L.polyline(altCoords, { color: '#fbbf24', weight: 4, dashArray: '8, 8' }).addTo(map);
+
+            allBounds.push([altPt.lat, altPt.lon]);
+        }
+
+        if (allBounds.length > 1) {
+            map.fitBounds(allBounds, { padding: [30, 30] });
+        }
+
+        document.getElementById('distance').value = totalDistance.toFixed(1);
+        document.getElementById('alt_distance').value = altDistNM.toFixed(1);
+
+        recalculateFlightData();
+    }
+
+    function recalculateFlightData() {
+        const dist = parseFloat(document.getElementById('distance').value) || 0;
+        const altDist = parseFloat(document.getElementById('alt_distance').value) || 0;
+        const tas = parseFloat(document.getElementById('tas').value) || 440;
+        const wind = parseFloat(document.getElementById('wind_component').value) || 0;
+        const fuelRate = parseFloat(document.getElementById('fuel_rate').value) || 5850;
+        const dow = parseFloat(document.getElementById('dow_input').value) || 0;
+
+        const gs = tas + wind;
+        document.getElementById('ground_speed').value = gs;
+
+        let eteHoursDecimal = 0;
+        let hh = 0, mm = 0;
+        if (gs > 0 && dist > 0) {
+            eteHoursDecimal = dist / gs;
+            hh = Math.floor(eteHoursDecimal);
+            mm = Math.round((eteHoursDecimal - hh) * 60);
+        }
+        document.getElementById('ete').value = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+
+        let altTimeHours = 0;
+        let altHh = 0, altMm = 0;
+        if (gs > 0 && altDist > 0) {
+            altTimeHours = altDist / gs;
+            altHh = Math.floor(altTimeHours);
+            altMm = Math.round((altTimeHours - altHh) * 60);
+        }
+        document.getElementById('alt_ete').value = `${String(altHh).padStart(2, '0')}:${String(altMm).padStart(2, '0')}`;
+
+        let tripBurn = eteHoursDecimal * fuelRate;
+        let altBurn = altTimeHours * fuelRate;
+        let reserve45Min = fuelRate * 0.75;
+        let contingencyAndReserves = altBurn + reserve45Min;
+        let minDispatchFuel = tripBurn + contingencyAndReserves;
+        document.getElementById('min_dispatch_fuel').value = Math.round(minDispatchFuel);
+
+        let fob = parseFloat(document.getElementById('fuel_total').value) || 0;
+        let extraFuel = fob - minDispatchFuel;
+
+        const altName = document.getElementById('alternate').value.toUpperCase().trim();
+
+        const items = [
+            { name: "1. TRIP BURN (CONSUMO RUTA PRINCIPAL)", val: tripBurn },
+            { name: `2. CONTINGENCY / ALT / RES (${altName || 'N/A'} - ${altDist.toFixed(0)} NM)`, val: contingencyAndReserves },
+            { name: "3. MINIMUM DISPATCH FUEL (TRI-FUEL AUTOMÁTICO)", val: minDispatchFuel },
+            { name: "FOB (FUEL ON BOARD)", val: fob },
+            { name: "EXTRA / REMAINING FUEL", val: extraFuel }
+        ];
+
+        let tbodyHTML = "";
+        items.forEach(item => {
+            let lts = currentUnit === "LBS" ? item.val * LBS_TO_LITERS : item.val * KGS_TO_LITERS;
+            let gal = currentUnit === "LBS" ? item.val * LBS_TO_GALLONS : item.val * KGS_TO_GALLONS;
+
+            tbodyHTML += `<tr>
+                <td><strong>${item.name}</strong></td>
+                <td>${item.val.toFixed(0)} ${currentUnit}</td>
+                <td>${lts.toFixed(0)}</td>
+                <td>${gal.toFixed(0)}</td>
+            </tr>`;
+        });
+
+        document.getElementById('table-body').innerHTML = tbodyHTML;
+
+        const routeStr = plottedPoints.map(p => p.name).join(' -> ');
+        document.getElementById('terminal').innerText = 
+`================ FLIGHT DISPATCHER NAV LOG & OFP STATUS ================
+AIRCRAFT: ${document.getElementById('ac_type').value} | DOW: ${dow} ${currentUnit}
+CRUISE TAS: ${tas} KTS | WIND: ${wind} KTS (GS: ${gs} KTS)
+ROUTE ATS: ${routeStr || 'DIRECT'}
+RAV ALTERNATE (EN RUTA): ${altName || 'NONE'} | DIST DEST->ALT: ${altDist.toFixed(0)} NM | ALT ETE (T=D/V): ${String(altHh).padStart(2, '0')}:${String(altMm).padStart(2, '0')}
+TRIP DIST: ${dist} NM | TRIP ETE (T=D/V): ${String(hh).padStart(2, '0')} HRS ${String(mm).padStart(2, '0')} MINS
+-----------------------------------------------------------------------
+[TRI-FUEL AUTOMATIC RAV ANALYSIS]
+1. TRIP BURN: ${Math.round(tripBurn)} ${currentUnit}
+2. CONTINGENCY & RESERVES (ALT + 45m RES): ${Math.round(contingencyAndReserves)} ${currentUnit}
+3. MIN DISPATCH FUEL REQUIRED: ${Math.round(minDispatchFuel)} ${currentUnit}
+-----------------------------------------------------------------------
+FOB ON BOARD: ${fob} ${currentUnit} | EXTRA FUEL: ${Math.round(extraFuel)} ${currentUnit}
+STATUS: ${fob >= minDispatchFuel ? 'LEGAL DISPATCH / OPERATIONAL (RAV COMPLIANT)' : 'UNFEASIBLE / FUEL DEFICIT'}
+================================================================-------`;
+    }
+
+    function calculateFactibilidad() {
+        recalculateFlightData();
+        const fob = parseFloat(document.getElementById('fuel_total').value) || 0;
+        const minReq = parseFloat(document.getElementById('min_dispatch_fuel').value) || 0;
+        
+        let status = fob >= minReq ? "FEASIBLE / DISPATCH APPROVED (RAV COMPLIANT)" : "UNFEASIBLE / ADDITIONAL FUEL REQUIRED";
+        alert(`FLIGHT DISPATCHER EVALUATION RESULT:
+STATUS: ${status}
+MIN REQUIRED FUEL: ${minReq} ${currentUnit}
+FOB ON BOARD: ${fob} ${currentUnit}`);
+    }
+
+    window.onload = function() {
+        initMap();
+    };
+</script>
+
+</body>
+</html>
